@@ -172,39 +172,39 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
                   {slide.description}
                 </Text>
 
-                {/* Action buttons */}
-                <View style={styles.actions}>
-                  {isCollection && slide.collection ? (
-                    <TouchableOpacity
-                      style={styles.watchBtn}
-                      onPress={() => onSelectCollection && onSelectCollection(slide.collection!)}
-                      activeOpacity={0.8}
-                    >
-                      <Layers size={16} color="#FFFFFF" />
-                      <Text style={styles.watchBtnText}>Смотреть подборку</Text>
-                    </TouchableOpacity>
-                  ) : slide.movie ? (
-                    <>
+                  {/* Action buttons */}
+                  <View style={styles.actions}>
+                    {isCollection && slide.collection ? (
                       <TouchableOpacity
                         style={styles.watchBtn}
-                        onPress={() => onWatchMovie(slide.movie!)}
+                        onPress={() => onSelectCollection && onSelectCollection(slide.collection!)}
                         activeOpacity={0.8}
                       >
-                        <Play size={16} color="#FFFFFF" fill="#FFFFFF" />
-                        <Text style={styles.watchBtnText}>Смотреть</Text>
+                        <Layers size={16} color="#FFFFFF" />
+                        <Text style={styles.watchBtnText}>Смотреть подборку</Text>
                       </TouchableOpacity>
+                    ) : slide.movie ? (
+                      <>
+                        <TouchableOpacity
+                          style={styles.watchBtn}
+                          onPress={() => onWatchMovie(slide.movie!)}
+                          activeOpacity={0.8}
+                        >
+                          <Play size={16} color="#FFFFFF" fill="#FFFFFF" />
+                          <Text style={styles.watchBtnText}>Смотреть</Text>
+                        </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={styles.infoBtn}
-                        onPress={() => onSelectMovie(slide.movie!)}
-                        activeOpacity={0.8}
-                      >
-                        <Info size={16} color="#FFFFFF" />
-                        <Text style={styles.infoBtnText}>О фильме</Text>
-                      </TouchableOpacity>
-                    </>
-                  ) : null}
-                </View>
+                        <TouchableOpacity
+                          style={styles.infoBtn}
+                          onPress={() => onSelectMovie(slide.movie!)}
+                          activeOpacity={0.8}
+                        >
+                          <Info size={16} color="#FFFFFF" />
+                          <Text style={styles.infoBtnText}>О фильме</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : null}
+                  </View>
               </View>
             </TouchableOpacity>
           );

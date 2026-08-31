@@ -45,7 +45,8 @@ const QUALITY_OPTIONS: QualityOption[] = [
 
 export default function PlayerScreen() {
   const insets = useSafeAreaInsets();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string }>() || {};
+  const id = params.id;
   const router = useRouter();
   const videoRef = useRef<Video>(null);
 
@@ -95,7 +96,7 @@ export default function PlayerScreen() {
         o === ScreenOrientation.Orientation.LANDSCAPE_RIGHT
       ) {
         setIsFullscreen(true);
-        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.SENSOR_LANDSCAPE).catch(() => {});
+        ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
       } else if (
         o === ScreenOrientation.Orientation.PORTRAIT_UP ||
         o === ScreenOrientation.Orientation.PORTRAIT_DOWN
@@ -223,7 +224,7 @@ export default function PlayerScreen() {
           await videoRef.current.presentFullscreenPlayer();
         } catch {}
         try {
-          await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.SENSOR_LANDSCAPE);
+          await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
         } catch {}
         setIsFullscreen(true);
       }
@@ -321,7 +322,7 @@ export default function PlayerScreen() {
             onFullscreenUpdate={(event) => {
               if (event.fullscreenUpdate === 1 || event.fullscreenUpdate === 2) {
                 setIsFullscreen(true);
-                ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.SENSOR_LANDSCAPE).catch(() => {});
+                ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE).catch(() => {});
               } else if (event.fullscreenUpdate === 3 || event.fullscreenUpdate === 0) {
                 setIsFullscreen(false);
                 ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});

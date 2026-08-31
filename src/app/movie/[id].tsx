@@ -19,7 +19,8 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { Movie } from '../../types/cinema';
 
 export default function MovieDetailsScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string }>() || {};
+  const id = params.id;
   const router = useRouter();
   const { user, isAuthenticated, isGuest, hasActiveSubscription, subscriptions } = useAuthStore();
 
@@ -91,7 +92,7 @@ export default function MovieDetailsScreen() {
       await api.rateMovie(movie.id, userRating, userComment);
       setRatingSubmitted(true);
       Alert.alert('Успех', 'Ваш отзыв успешно сохранен!');
-      fetchMovieData(); // Обновляем список отзывов
+      fetchMovieData();
     } catch (e: any) {
       console.warn('Rating error', e);
       Alert.alert('Ошибка', e.message || 'Не удалось сохранить отзыв');
@@ -593,8 +594,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   reviewDate: {
-    color: '#8A8A9E',
-    fontSize: 12,
+    color: '#6E6E82',
+    fontSize: 11,
+    marginTop: 2,
   },
   reviewStars: {
     flexDirection: 'row',

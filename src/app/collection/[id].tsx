@@ -19,7 +19,8 @@ import { MovieCard } from '../../components/MovieCard';
 const FALLBACK_BANNER = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&q=80';
 
 export default function CollectionDetailsScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string }>() || {};
+  const id = params.id;
   const router = useRouter();
 
   const [collection, setCollection] = useState<MovieCollection | null>(null);
@@ -130,7 +131,6 @@ export default function CollectionDetailsScreen() {
                   <MovieCard
                     movie={movie}
                     onPress={() => handleSelectMovie(movie)}
-                    onPlayPress={() => handleWatchMovie(movie)}
                   />
                 </View>
               ))}

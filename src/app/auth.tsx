@@ -1,18 +1,19 @@
+import { useRouter } from 'expo-router';
+import { ArrowLeft, Film, Lock, LogIn, Mail, User, UserPlus } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { ArrowLeft, Film, Mail, Lock, User, Phone, LogIn, UserPlus } from 'lucide-react-native';
+import { DEFAULT_UZ_PHONE_PREFIX, PhoneInput } from '../components/PhoneInput';
 import { useAuthStore } from '../store/useAuthStore';
 
 export default function AuthScreen() {
@@ -25,7 +26,7 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState(DEFAULT_UZ_PHONE_PREFIX);
   const [localError, setLocalError] = useState<string | null>(null);
 
   const handleSubmit = async () => {
@@ -41,7 +42,7 @@ export default function AuthScreen() {
         router.back();
       }
     } else {
-      if (!firstName || !lastName || !phoneNumber) {
+      if (!firstName || !lastName || !phoneNumber || phoneNumber === DEFAULT_UZ_PHONE_PREFIX) {
         setLocalError('Имя, Фамилия и телефон обязательны для регистрации');
         return;
       }
@@ -147,17 +148,10 @@ export default function AuthScreen() {
 
                 <View style={styles.inputGroup}>
                   <Text style={styles.inputLabel}>Номер телефона *</Text>
-                  <View style={styles.inputWrapper}>
-                    <Phone size={18} color="#8A8A9E" />
-                    <TextInput
-                      style={styles.input}
-                      placeholder="+7 (999) 000-00-00"
-                      placeholderTextColor="#6E6E82"
-                      value={phoneNumber}
-                      onChangeText={setPhoneNumber}
-                      keyboardType="phone-pad"
-                    />
-                  </View>
+                  <PhoneInput
+                    value={phoneNumber}
+                    onChangeText={setPhoneNumber}
+                  />
                 </View>
               </>
             )}

@@ -16,10 +16,12 @@ import { useAuthStore } from '../store/useAuthStore';
 import { Movie, SubscriptionType } from '../types/cinema';
 
 export default function CheckoutScreen() {
-  const { movieId, subscriptionTypeId } = useLocalSearchParams<{
+  const params = useLocalSearchParams<{
     movieId?: string;
     subscriptionTypeId?: string;
-  }>();
+  }>() || {};
+  const movieId = params.movieId;
+  const subscriptionTypeId = params.subscriptionTypeId;
   const router = useRouter();
   const { refreshSubscriptions } = useAuthStore();
 

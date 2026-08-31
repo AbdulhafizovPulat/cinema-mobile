@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Sparkles, CheckCircle2, ShieldCheck, Zap } from 'lucide-react-native';
 import { Header } from '../../components/Header';
 import { api } from '../../services/api';
@@ -18,7 +18,8 @@ import { SubscriptionType } from '../../types/cinema';
 export default function SubscribeScreen() {
   const router = useRouter();
   const { isAuthenticated, isGuest, subscriptions, hasActiveSubscription } = useAuthStore();
-  const { movieId } = useLocalSearchParams<{ movieId?: string }>();
+  const params = useLocalSearchParams<{ movieId?: string }>() || {};
+  const movieId = params.movieId;
   const [plans, setPlans] = useState<SubscriptionType[]>([]);
   const [loading, setLoading] = useState(true);
 
