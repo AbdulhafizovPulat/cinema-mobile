@@ -1,21 +1,22 @@
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowLeft, Lock, MessageSquare, Play, Star, Tag, User, Heart } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  Image,
-  TouchableOpacity,
   ActivityIndicator,
-  StatusBar,
-  TextInput,
   Alert,
+  Image,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Play, Lock, Star, Sparkles, ShoppingCart, User, Tag, MessageSquare } from 'lucide-react-native';
 import { api } from '../../services/api';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useFavoriteStore } from '../../store/useFavoriteStore';
 import { Movie } from '../../types/cinema';
 
 export default function MovieDetailsScreen() {
@@ -23,12 +24,16 @@ export default function MovieDetailsScreen() {
   const id = params.id;
   const router = useRouter();
   const { user, isAuthenticated, isGuest, hasActiveSubscription, subscriptions } = useAuthStore();
-
+  const favorites = useFavoriteStore((state) => state.favorites);
+  const toggleFavorite = useFavoriteStore((state) => state.toggleFavorite);
   const [movie, setMovie] = useState<Movie & { ratingsList?: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRating, setUserRating] = useState(0);
   const [userComment, setUserComment] = useState('');
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
+
+  const targetId = movie?.id ?? (id ? Number(id) : null);
+  const favorited = targetId !== null && favorites.some((m) => Number(m.id) === Number(targetId));
 
   // Fetch movie data and find user's own review
   const fetchMovieData = () => {
@@ -73,6 +78,21 @@ export default function MovieDetailsScreen() {
     } else {
       router.push(`/(tabs)/subscribe?movieId=${movie.id}`);
     }
+  };
+
+  const handleFavoriteToggle = async () => {
+    if (!movie) return;
+    if (!isAuthenticated || isGuest) {
+      router.push('/auth');
+      return;
+    }
+    const added = await toggleFavorite(movie, user?.id);
+    Alert.alert(
+      added ? 'Добавлено в избранное' : 'Удалено из избранного',
+      added
+        ? `Фильм «${movie.title}» сохранён в список избранного.`
+        : `Фильм «${movie.title}» удалён из избранного.`
+    );
   };
 
   const handleRateSelect = (stars: number) => {
@@ -129,8 +149,20 @@ export default function MovieDetailsScreen() {
             <ArrowLeft size={20} color="#FFFFFF" />
           </TouchableOpacity>
 
-          {/* Badge */}
-          <View style={styles.badgeTopRight}>
+          {/* Top Right Controls (Badge & Favorite) */}
+          <View style={styles.topRightControls}>
+            <TouchableOpacity
+              style={[styles.headerFavBtn, favorited && styles.headerFavBtnActive]}
+              onPress={handleFavoriteToggle}
+              activeOpacity={0.8}
+            >
+              <Heart
+                size={18}
+                color={favorited ? '#E50914' : '#FFFFFF'}
+                fill={favorited ? '#E50914' : 'transparent'}
+              />
+            </TouchableOpacity>
+
             {movie.isPremium ? (
               <View style={styles.premBadge}>
                 <Lock size={12} color="#FFFFFF" style={{ marginRight: 4 }} />
@@ -170,24 +202,38 @@ export default function MovieDetailsScreen() {
             ) : null}
           </View>
 
-          {/* Big Action Watch / Buy Button */}
-          <TouchableOpacity
-            style={[styles.mainActionBtn, !canWatchDirectly && styles.buyActionBtn]}
-            onPress={handleWatch}
-            activeOpacity={0.85}
-          >
-            {canWatchDirectly ? (
-              <>
-                <Play size={20} color="#FFFFFF" fill="#FFFFFF" />
-                <Text style={styles.mainActionText}>Смотреть фильм</Text>
-              </>
-            ) : (
-              <>
-                <Lock size={20} color="#FFFFFF" />
-                <Text style={styles.mainActionText}>Оформить подписку</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          {/* Actions Row: Watch + Favorite */}
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.mainActionBtn, !canWatchDirectly && styles.buyActionBtn]}
+              onPress={handleWatch}
+              activeOpacity={0.85}
+            >
+              {canWatchDirectly ? (
+                <>
+                  <Play size={20} color="#FFFFFF" fill="#FFFFFF" />
+                  <Text style={styles.mainActionText}>Смотреть фильм</Text>
+                </>
+              ) : (
+                <>
+                  <Lock size={20} color="#FFFFFF" />
+                  <Text style={styles.mainActionText}>Оформить подписку</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionFavBtn, favorited && styles.actionFavBtnActive]}
+              onPress={handleFavoriteToggle}
+              activeOpacity={0.85}
+            >
+              <Heart
+                size={20}
+                color={favorited ? '#E50914' : '#8A8A9E'}
+                fill={favorited ? '#E50914' : 'transparent'}
+              />
+            </TouchableOpacity>
+          </View>
 
           {/* Description */}
           <Text style={styles.sectionTitle}>Описание</Text>
@@ -246,7 +292,7 @@ export default function MovieDetailsScreen() {
         {/* Reviews Section */}
         <View style={styles.reviewsSection}>
           <Text style={styles.sectionTitle}>Отзывы и оценки</Text>
-          
+
           <View style={styles.reviewsSummaryRow}>
             <Text style={styles.bigRatingText}>
               {movie.averageRating && movie.averageRating > 0 ? movie.averageRating.toFixed(1) : '—'}
@@ -256,7 +302,7 @@ export default function MovieDetailsScreen() {
               <Text style={styles.reviewsSubtitleText}>Средний рейтинг</Text>
             </View>
           </View>
-          
+
           {movie.ratingsList && movie.ratingsList.length > 0 ? (
             movie.ratingsList.slice(0, 3).map((rating) => (
               <View key={rating.id} style={styles.reviewItem}>
@@ -289,10 +335,10 @@ export default function MovieDetailsScreen() {
               <Text style={styles.noReviewsSub}>Будьте первым, кто поделится своим мнением!</Text>
             </View>
           )}
-          
+
           {movie.ratingsList && movie.ratingsList.length > 3 && (
             <TouchableOpacity style={styles.showAllReviewsBtn} onPress={() => Alert.alert('В разработке', 'Открытие всех отзывов')}>
-               <Text style={styles.showAllReviewsText}>Показать все отзывы ({movie.ratingsList.length})</Text>
+              <Text style={styles.showAllReviewsText}>Показать все отзывы ({movie.ratingsList.length})</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -353,18 +399,35 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
-  badgeTopRight: {
+  topRightControls: {
     position: 'absolute',
     top: 16,
     right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerFavBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  headerFavBtnActive: {
+    backgroundColor: 'rgba(229, 9, 20, 0.25)',
+    borderColor: '#E50914',
   },
   premBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#E50914',
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingVertical: 10,
+    borderRadius: 12,
   },
   premBadgeText: {
     color: '#FFFFFF',
@@ -374,8 +437,8 @@ const styles = StyleSheet.create({
   freeBadge: {
     backgroundColor: '#10B981',
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingVertical: 10,
+    borderRadius: 12,
   },
   freeBadgeText: {
     color: '#FFFFFF',
@@ -401,6 +464,41 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 20,
     flexWrap: 'wrap',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 24,
+  },
+  actionFavBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#161622',
+    borderWidth: 1,
+    borderColor: '#262638',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionFavBtnActive: {
+    borderColor: '#E50914',
+    backgroundColor: 'rgba(229, 9, 20, 0.15)',
+  },
+  mainActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: '#E50914',
+    paddingVertical: 15,
+    borderRadius: 16,
+    shadowColor: '#E50914',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 6,
   },
   ratingBadge: {
     flexDirection: 'row',
@@ -439,21 +537,6 @@ const styles = StyleSheet.create({
   authorText: {
     color: '#8A8A9E',
     fontSize: 13,
-  },
-  mainActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: '#E50914',
-    paddingVertical: 14,
-    borderRadius: 16,
-    marginBottom: 24,
-    shadowColor: '#E50914',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 6,
   },
   buyActionBtn: {
     backgroundColor: '#6D28D9',

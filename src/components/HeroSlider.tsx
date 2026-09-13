@@ -10,8 +10,11 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
 } from 'react-native';
-import { Play, Info, Sparkles, Lock, Layers } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { Play, Info, Sparkles, Lock, Layers, Heart } from 'lucide-react-native';
 import { Movie, MovieCollection } from '../types/cinema';
+import { useFavoriteStore } from '../store/useFavoriteStore';
+import { useAuthStore } from '../store/useAuthStore';
 
 interface HeroSliderProps {
   movies: Movie[];
@@ -42,8 +45,12 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
   onWatchMovie,
   onSelectCollection,
 }) => {
+  const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+  const favorites = useFavoriteStore((state) => state.favorites);
+  const toggleFavorite = useFavoriteStore((state) => state.toggleFavorite);
+  const { isAuthenticated, isGuest, user } = useAuthStore();
 
   // Build slider items from collections & movies
   const slides: SlideItem[] = [];
@@ -108,17 +115,20 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
         contentContainerStyle={styles.scrollContent}
+        onMomentumScrollEnd={handleScroll}
+        decelerationRate="fast"
+        snapToInterval={BANNER_WIDTH + 16}
+        snapToAlignment="start"
       >
         {featuredSlides.map((slide) => {
           const isCollection = slide.type === 'collection';
+          const isMovieFav = slide.movie ? favorites.some((m) => Number(m.id) === Number(slide.movie!.id)) : false;
+
           return (
             <TouchableOpacity
               key={slide.id}
               style={styles.bannerCard}
-              activeOpacity={0.9}
               onPress={() => {
                 if (isCollection && slide.collection && onSelectCollection) {
                   onSelectCollection(slide.collection);
@@ -126,6 +136,7 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
                   onSelectMovie(slide.movie);
                 }
               }}
+              activeOpacity={0.9}
             >
               <Image
                 source={{ uri: slide.posterUrl || FALLBACK_BANNER }}
@@ -140,13 +151,13 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
                 <View style={styles.badgeRow}>
                   {isCollection ? (
                     <View style={styles.colBadge}>
-                      <Layers size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
-                      <Text style={styles.colBadgeText}>ПОДБОРКА</Text>
+                      <Layers size={11} color="#FFD700" style={{ marginRight: 4 }} />
+                      <Text style={styles.colBadgeText}>ПОДБОРКА КИНО</Text>
                     </View>
                   ) : (
                     <View style={styles.newBadge}>
-                      <Sparkles size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
-                      <Text style={styles.newBadgeText}>ПРЕМЬЕРА</Text>
+                      <Sparkles size={11} color="#E50914" style={{ marginRight: 4 }} />
+                      <Text style={styles.newBadgeText}>ХИТ СЕЗОНА</Text>
                     </View>
                   )}
 
@@ -201,6 +212,27 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
                         >
                           <Info size={16} color="#FFFFFF" />
                           <Text style={styles.infoBtnText}>О фильме</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[styles.favBtn, isMovieFav && styles.favBtnActive]}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            if (!isAuthenticated || isGuest) {
+                              router.push('/auth');
+                              return;
+                            }
+                            if (slide.movie) {
+                              toggleFavorite(slide.movie, user?.id);
+                            }
+                          }}
+                          activeOpacity={0.8}
+                        >
+                          <Heart
+                            size={16}
+                            color={isMovieFav ? '#E50914' : '#FFFFFF'}
+                            fill={isMovieFav ? '#E50914' : 'transparent'}
+                          />
                         </TouchableOpacity>
                       </>
                     ) : null}
@@ -362,6 +394,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '600',
+  },
+  favBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  favBtnActive: {
+    backgroundColor: 'rgba(229, 9, 20, 0.25)',
+    borderColor: '#E50914',
   },
   dotsContainer: {
     flexDirection: 'row',

@@ -1,7 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { Play, Star, Lock } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { Play, Star, Lock, Heart } from 'lucide-react-native';
 import { Movie } from '../types/cinema';
+import { useFavoriteStore } from '../store/useFavoriteStore';
+import { useAuthStore } from '../store/useAuthStore';
 
 interface MovieCardProps {
   movie: Movie;
@@ -13,6 +16,20 @@ const DEFAULT_WIDTH = 135;
 
 export const MovieCard: React.FC<MovieCardProps> = ({ movie, onPress, width = DEFAULT_WIDTH }) => {
   const height = width * 1.45;
+  const router = useRouter();
+  const favorites = useFavoriteStore((state) => state.favorites);
+  const toggleFavorite = useFavoriteStore((state) => state.toggleFavorite);
+  const { isAuthenticated, isGuest, user } = useAuthStore();
+  const favorited = favorites.some((m) => Number(m.id) === Number(movie.id));
+
+  const handleFavoritePress = (e: any) => {
+    e?.stopPropagation?.();
+    if (!isAuthenticated || isGuest) {
+      router.push('/auth');
+      return;
+    }
+    toggleFavorite(movie, user?.id);
+  };
 
   return (
     <TouchableOpacity
@@ -27,8 +44,15 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onPress, width = DE
           resizeMode="cover"
         />
 
+        {/* Play Icon Overlay */}
+        <View style={styles.playOverlay} pointerEvents="none">
+          <View style={styles.playCircle}>
+            <Play size={16} color="#FFFFFF" fill="#FFFFFF" style={{ marginLeft: 2 }} />
+          </View>
+        </View>
+
         {/* Premium / Free Badge */}
-        <View style={styles.badgeContainer}>
+        <View style={styles.badgeContainer} pointerEvents="none">
           {movie.isPremium ? (
             <View style={styles.premiumBadge}>
               <Lock size={10} color="#FFFFFF" style={{ marginRight: 3 }} />
@@ -41,12 +65,19 @@ export const MovieCard: React.FC<MovieCardProps> = ({ movie, onPress, width = DE
           )}
         </View>
 
-        {/* Play Icon Overlay */}
-        <View style={styles.playOverlay}>
-          <View style={styles.playCircle}>
-            <Play size={16} color="#FFFFFF" fill="#FFFFFF" style={{ marginLeft: 2 }} />
-          </View>
-        </View>
+        {/* Favorite Heart Button */}
+        <TouchableOpacity
+          style={[styles.favoriteBtn, favorited && styles.favoriteBtnActive]}
+          onPress={handleFavoritePress}
+          activeOpacity={0.7}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Heart
+            size={15}
+            color={favorited ? '#E50914' : '#FFFFFF'}
+            fill={favorited ? '#E50914' : 'transparent'}
+          />
+        </TouchableOpacity>
       </View>
 
       <Text style={styles.title} numberOfLines={1}>
@@ -116,6 +147,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.5,
   },
+  favoriteBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 10,
+    elevation: 5,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: 'rgba(9, 9, 13, 0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  favoriteBtnActive: {
+    backgroundColor: 'rgba(229, 9, 20, 0.35)',
+    borderColor: '#E50914',
+  },
   playOverlay: {
     position: 'absolute',
     top: 0,
@@ -163,3 +213,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+

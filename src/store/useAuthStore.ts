@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { storage } from '../utils/storage';
 import { api } from '../services/api';
 import { User, UserSubscription } from '../types/cinema';
+import { useFavoriteStore } from './useFavoriteStore';
 
 interface AuthState {
   token: string | null;
@@ -40,7 +41,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         try {
           const profile = await api.getProfile();
           set({ user: profile });
-          await get().refreshSubscriptions();
+          await Promise.all([
+            get().refreshSubscriptions(),
+            useFavoriteStore.getState().loadFavorites(profile.id),
+          ]);
         } catch (e) {
           // Token might be expired, fallback to guest mode
           await storage.removeItem('cinema_jwt_token');
@@ -59,12 +63,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             isAuthenticated: false,
             isGuest: true,
           });
+          await useFavoriteStore.getState().loadFavorites(null);
         } catch {
           set({ token: null, isAuthenticated: false, isGuest: true });
+          await useFavoriteStore.getState().loadFavorites(null);
         }
       }
     } catch (err: any) {
       set({ error: err.message });
+      await useFavoriteStore.getState().loadFavorites(null);
     } finally {
       set({ isLoading: false });
     }
@@ -83,7 +90,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isGuest: false,
         isLoading: false,
       });
-      await get().refreshSubscriptions();
+      await Promise.all([
+        get().refreshSubscriptions(),
+        useFavoriteStore.getState().loadFavorites(res.user?.id),
+      ]);
       return true;
     } catch (err: any) {
       set({ error: err.message || 'Ошибка входа', isLoading: false });
@@ -106,6 +116,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isGuest: false,
         isLoading: false,
       });
+      await Promise.all([
+        get().refreshSubscriptions(),
+        useFavoriteStore.getState().loadFavorites(loginRes.user?.id),
+      ]);
       return true;
     } catch (err: any) {
       set({ error: err.message || 'Ошибка регистрации', isLoading: false });
@@ -125,6 +139,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isGuest: true,
       isLoading: false,
     });
+    await useFavoriteStore.getState().loadFavorites(null);
     // Re-initialize guest token
     await get().initAuth();
   },

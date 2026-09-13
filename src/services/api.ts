@@ -1,5 +1,5 @@
+import { Category, Movie, MovieCollection, MovieRating, PurchaseHistoryItem, SubscriptionType, User, UserSubscription } from '../types/cinema';
 import { storage } from '../utils/storage';
-import { Movie, Category, User, SubscriptionType, UserSubscription, PurchaseHistoryItem, MovieCollection, MovieRating } from '../types/cinema';
 
 export const API_BASE_URL = 'https://cinema-backend.cinema-abdulhafizov.workers.dev';
 
@@ -81,12 +81,12 @@ export const api = {
   },
 
   async getMovieById(id: number) {
-    const res = await apiFetch<{ 
-      movie: Movie; 
-      ratings?: { averageRating?: number; ratingCount?: number; list?: MovieRating[] }; 
-      userAccess?: { hasAccess: boolean; message: string } 
+    const res = await apiFetch<{
+      movie: Movie;
+      ratings?: { averageRating?: number; ratingCount?: number; list?: MovieRating[] };
+      userAccess?: { hasAccess: boolean; message: string }
     }>(`/api/movies/${id}`);
-    
+
     if (res && res.movie) {
       return {
         ...res.movie,

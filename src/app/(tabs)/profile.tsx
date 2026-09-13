@@ -6,18 +6,36 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User as UserIcon, LogOut, ShieldCheck, Mail, Phone, CreditCard, History, Lock, Sparkles } from 'lucide-react-native';
+import {
+  User as UserIcon,
+  LogOut,
+  ShieldCheck,
+  Mail,
+  Phone,
+  CreditCard,
+  History,
+  Lock,
+  Sparkles,
+  Heart,
+  Trash2,
+  Compass,
+} from 'lucide-react-native';
 import { Header } from '../../components/Header';
+import { MovieCard } from '../../components/MovieCard';
 import { useAuthStore } from '../../store/useAuthStore';
+import { useFavoriteStore } from '../../store/useFavoriteStore';
 import { api } from '../../services/api';
-import { PurchaseHistoryItem } from '../../types/cinema';
+import { Movie, PurchaseHistoryItem } from '../../types/cinema';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { isAuthenticated, isGuest, user, subscriptions, logout } = useAuthStore();
+  const favorites = useFavoriteStore((state) => state.favorites);
+  const clearFavorites = useFavoriteStore((state) => state.clearFavorites);
   const [history, setHistory] = useState<PurchaseHistoryItem[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
@@ -31,6 +49,25 @@ export default function ProfileScreen() {
         .finally(() => setLoadingHistory(false));
     }
   }, [isAuthenticated, isGuest]);
+
+  const handleSelectMovie = (movie: Movie) => {
+    router.push(`/movie/${movie.id}`);
+  };
+
+  const handleClearFavorites = () => {
+    Alert.alert(
+      'Очистить избранное',
+      'Вы уверены, что хотите удалить все фильмы из списка избранного?',
+      [
+        { text: 'Отмена', style: 'cancel' },
+        {
+          text: 'Очистить',
+          style: 'destructive',
+          onPress: () => clearFavorites(user?.id),
+        },
+      ]
+    );
+  };
 
   const activeSub = subscriptions.find(
     (s) => new Date(s.expiresAt).getTime() > new Date().getTime()
@@ -98,6 +135,61 @@ export default function ProfileScreen() {
               </View>
             </View>
 
+            {/* Favorites Section */}
+            <View style={styles.sectionCard}>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.titleWithIcon}>
+                  <Heart size={18} color="#E50914" fill="#E50914" />
+                  <Text style={styles.sectionTitle}>Избранные фильмы</Text>
+                  {favorites.length > 0 && (
+                    <View style={styles.countBadge}>
+                      <Text style={styles.countBadgeText}>{favorites.length}</Text>
+                    </View>
+                  )}
+                </View>
+                {favorites.length > 0 && (
+                  <TouchableOpacity
+                    onPress={handleClearFavorites}
+                    style={styles.clearFavBtn}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Trash2 size={15} color="#8A8A9E" />
+                    <Text style={styles.clearFavText}>Очистить</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {favorites.length === 0 ? (
+                <View style={styles.emptyFavContainer}>
+                  <Heart size={36} color="#333348" />
+                  <Text style={styles.emptyFavTitle}>Список избранного пуст</Text>
+                  <Text style={styles.emptyFavSubtitle}>
+                    Нажимайте сердечко на постерах понравившихся фильмов, чтобы не потерять их
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.exploreBtn}
+                    onPress={() => router.push('/(tabs)/explore')}
+                    activeOpacity={0.8}
+                  >
+                    <Compass size={16} color="#FFFFFF" />
+                    <Text style={styles.exploreBtnText}>Перейти в каталог</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.favScrollContent}
+                >
+                  {favorites.map((movie) => (
+                    <View key={`fav-${movie.id}`} style={styles.favItemWrapper}>
+                      <MovieCard movie={movie} onPress={handleSelectMovie} width={120} />
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+
             {/* Payment History */}
             <View style={styles.sectionCard}>
               <View style={styles.historyTitleRow}>
@@ -140,7 +232,7 @@ export default function ProfileScreen() {
             </View>
             <Text style={styles.guestTitle}>Войдите в аккаунт</Text>
             <Text style={styles.guestSub}>
-              Чтобы покупать фильмы, оформлять подписку и смотреть истории транзакций
+              Чтобы покупать фильмы, оформлять подписку и сохранять фильмы в избранное
             </Text>
 
             <TouchableOpacity
@@ -372,5 +464,87 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  titleWithIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  countBadge: {
+    backgroundColor: 'rgba(229, 9, 20, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(229, 9, 20, 0.4)',
+  },
+  countBadgeText: {
+    color: '#E50914',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  clearFavBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  clearFavText: {
+    color: '#8A8A9E',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  emptyFavContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    gap: 8,
+  },
+  emptyFavTitle: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+  emptyFavSubtitle: {
+    color: '#8A8A9E',
+    fontSize: 12,
+    textAlign: 'center',
+    maxWidth: 260,
+    lineHeight: 18,
+  },
+  exploreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#E50914',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    marginTop: 8,
+    shadowColor: '#E50914',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  exploreBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  favScrollContent: {
+    gap: 12,
+    paddingVertical: 4,
+  },
+  favItemWrapper: {
+    marginRight: 4,
   },
 });

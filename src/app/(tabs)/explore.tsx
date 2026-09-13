@@ -10,10 +10,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Search, X, Filter } from 'lucide-react-native';
+import { Search, X, Filter, Heart } from 'lucide-react-native';
 import { Header } from '../../components/Header';
 import { MovieCard } from '../../components/MovieCard';
 import { useMovieStore } from '../../store/useMovieStore';
+import { useFavoriteStore } from '../../store/useFavoriteStore';
+import { useAuthStore } from '../../store/useAuthStore';
 import { Movie } from '../../types/cinema';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -22,8 +24,10 @@ const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 export default function ExploreScreen() {
   const router = useRouter();
   const { movies } = useMovieStore();
+  const { isAuthenticated, isGuest } = useAuthStore();
+  const favorites = useFavoriteStore((state) => state.favorites);
   const [search, setSearch] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'free' | 'premium'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'free' | 'premium' | 'favorites'>('all');
 
   const filteredMovies = movies.filter((movie) => {
     const matchesSearch =
@@ -36,6 +40,7 @@ export default function ExploreScreen() {
 
     if (filterType === 'free') return !movie.isPremium;
     if (filterType === 'premium') return movie.isPremium;
+    if (filterType === 'favorites') return favorites.some((fav) => Number(fav.id) === Number(movie.id));
     return true;
   });
 
@@ -67,33 +72,54 @@ export default function ExploreScreen() {
         </View>
 
         {/* Filter Chips */}
-        <View style={styles.filterRow}>
-          <TouchableOpacity
-            style={[styles.filterChip, filterType === 'all' && styles.filterChipActive]}
-            onPress={() => setFilterType('all')}
+        <View style={styles.filterWrapper}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterRow}
           >
-            <Text style={[styles.filterChipText, filterType === 'all' && styles.filterChipTextActive]}>
-              Все ({movies.length})
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterChip, filterType === 'all' && styles.filterChipActive]}
+              onPress={() => setFilterType('all')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.filterChipText, filterType === 'all' && styles.filterChipTextActive]}>
+                Все ({movies.length})
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.filterChip, filterType === 'free' && styles.filterChipActive]}
-            onPress={() => setFilterType('free')}
-          >
-            <Text style={[styles.filterChipText, filterType === 'free' && styles.filterChipTextActive]}>
-              🟢 Бесплатные
-            </Text>
-          </TouchableOpacity>
+            {isAuthenticated && !isGuest && (
+              <TouchableOpacity
+                style={[styles.filterChip, filterType === 'favorites' && styles.filterChipActive]}
+                onPress={() => setFilterType('favorites')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.filterChipText, filterType === 'favorites' && styles.filterChipTextActive]}>
+                  ❤️ Избранное ({favorites.length})
+                </Text>
+              </TouchableOpacity>
+            )}
 
-          <TouchableOpacity
-            style={[styles.filterChip, filterType === 'premium' && styles.filterChipActive]}
-            onPress={() => setFilterType('premium')}
-          >
-            <Text style={[styles.filterChipText, filterType === 'premium' && styles.filterChipTextActive]}>
-              👑 Премиум
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterChip, filterType === 'free' && styles.filterChipActive]}
+              onPress={() => setFilterType('free')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.filterChipText, filterType === 'free' && styles.filterChipTextActive]}>
+                🟢 Бесплатные
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.filterChip, filterType === 'premium' && styles.filterChipActive]}
+              onPress={() => setFilterType('premium')}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.filterChipText, filterType === 'premium' && styles.filterChipTextActive]}>
+                👑 Премиум
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
 
         {/* Grid List */}
@@ -156,18 +182,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+  filterWrapper: {
+    marginBottom: 16,
+  },
   filterRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
-    marginBottom: 16,
+    paddingRight: 16,
   },
   filterChip: {
     backgroundColor: '#161622',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#262638',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   filterChipActive: {
     backgroundColor: '#E50914',
@@ -175,7 +207,7 @@ const styles = StyleSheet.create({
   },
   filterChipText: {
     color: '#8A8A9E',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
   },
   filterChipTextActive: {
