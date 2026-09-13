@@ -14,7 +14,8 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { api } from '../../services/api';
+import { api, isTokenExpiredError } from '../../services/api';
+import { ScreenLoader } from '../../components/ScreenLoader';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useFavoriteStore } from '../../store/useFavoriteStore';
 import { Movie } from '../../types/cinema';
@@ -115,18 +116,14 @@ export default function MovieDetailsScreen() {
       fetchMovieData();
     } catch (e: any) {
       console.warn('Rating error', e);
-      Alert.alert('Ошибка', e.message || 'Не удалось сохранить отзыв');
+      if (!isTokenExpiredError(e)) {
+        Alert.alert('Ошибка', e.message || 'Не удалось сохранить отзыв');
+      }
     }
   };
 
   if (loading || !movie) {
-    return (
-      <SafeAreaView style={styles.loadingArea}>
-        <StatusBar barStyle="light-content" />
-        <ActivityIndicator size="large" color="#E50914" />
-        <Text style={styles.loadingText}>Загрузка деталей фильма...</Text>
-      </SafeAreaView>
-    );
+    return <ScreenLoader label="Загружаем фильм..." />;
   }
 
   const canWatchDirectly = !movie.isPremium || hasActiveSubscription();

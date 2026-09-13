@@ -26,6 +26,7 @@ import {
 } from 'lucide-react-native';
 import { Header } from '../../components/Header';
 import { MovieCard } from '../../components/MovieCard';
+import { ScreenLoader } from '../../components/ScreenLoader';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useFavoriteStore } from '../../store/useFavoriteStore';
 import { api } from '../../services/api';
@@ -33,7 +34,7 @@ import { Movie, PurchaseHistoryItem } from '../../types/cinema';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { isAuthenticated, isGuest, user, subscriptions, logout } = useAuthStore();
+  const { isAuthenticated, isGuest, user, subscriptions, logout, isLoading } = useAuthStore();
   const favorites = useFavoriteStore((state) => state.favorites);
   const clearFavorites = useFavoriteStore((state) => state.clearFavorites);
   const [history, setHistory] = useState<PurchaseHistoryItem[]>([]);
@@ -72,6 +73,16 @@ export default function ProfileScreen() {
   const activeSub = subscriptions.find(
     (s) => new Date(s.expiresAt).getTime() > new Date().getTime()
   );
+
+  // Глобальный лоадер пока authStore инициализируется
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <Header />
+        <ScreenLoader label="Загружаем профиль..." />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>

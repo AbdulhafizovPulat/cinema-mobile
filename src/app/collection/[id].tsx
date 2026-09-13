@@ -6,7 +6,6 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
-  ActivityIndicator,
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +14,7 @@ import { ArrowLeft, Layers, Film } from 'lucide-react-native';
 import { api } from '../../services/api';
 import { MovieCollection, Movie } from '../../types/cinema';
 import { MovieCard } from '../../components/MovieCard';
+import { ScreenLoader } from '../../components/ScreenLoader';
 
 const FALLBACK_BANNER = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800&q=80';
 
@@ -57,13 +57,7 @@ export default function CollectionDetailsScreen() {
   };
 
   if (loading) {
-    return (
-      <SafeAreaView style={styles.centerContainer}>
-        <StatusBar barStyle="light-content" backgroundColor="#09090D" />
-        <ActivityIndicator size="large" color="#E50914" />
-        <Text style={styles.loadingText}>Загрузка подборки...</Text>
-      </SafeAreaView>
-    );
+    return <ScreenLoader label="Загрузка подборки..." />;
   }
 
   if (error || !collection) {

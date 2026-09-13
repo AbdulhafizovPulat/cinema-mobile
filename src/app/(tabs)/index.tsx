@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   RefreshControl,
-  ActivityIndicator,
   StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +15,7 @@ import { Header } from '../../components/Header';
 import { HeroSlider } from '../../components/HeroSlider';
 import { CategorySelector } from '../../components/CategorySelector';
 import { MovieSection } from '../../components/MovieSection';
+import { ScreenLoader } from '../../components/ScreenLoader';
 import { Movie, MovieCollection } from '../../types/cinema';
 
 export default function HomeScreen() {
@@ -69,6 +69,16 @@ export default function HomeScreen() {
     ? movies.filter((m) => m.category?.id === selectedCategoryId)
     : movies;
 
+  if (isLoading && movies.length === 0) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <StatusBar barStyle="light-content" backgroundColor="#09090D" />
+        <Header />
+        <ScreenLoader label="Загрузка кинематографа..." />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <StatusBar barStyle="light-content" backgroundColor="#09090D" />
@@ -86,13 +96,6 @@ export default function HomeScreen() {
           />
         }
       >
-        {isLoading && !movies.length ? (
-          <View style={styles.loaderContainer}>
-            <ActivityIndicator size="large" color="#E50914" />
-            <Text style={styles.loaderText}>Загрузка кинематографа...</Text>
-          </View>
-        ) : (
-          <>
             {/* Hero Featured Slider with Collections */}
             {!selectedCategoryId && (
               <HeroSlider
@@ -137,8 +140,6 @@ export default function HomeScreen() {
             )}
 
             <View style={{ height: 40 }} />
-          </>
-        )}
       </ScrollView>
     </SafeAreaView>
   );

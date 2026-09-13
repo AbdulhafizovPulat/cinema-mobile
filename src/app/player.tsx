@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   StatusBar,
   Modal,
   LayoutChangeEvent,
@@ -26,7 +25,8 @@ import {
   Sliders,
   Check,
 } from 'lucide-react-native';
-import { api } from '../services/api';
+import { ScreenLoader } from '../components/ScreenLoader';
+import { api, isTokenExpiredError } from '../services/api';
 
 interface QualityOption {
   id: string;
@@ -133,7 +133,11 @@ export default function PlayerScreen() {
         }
       })
       .catch((err: any) => {
-        setError(err.message || 'Ошибка доступа к потоку видео');
+        if (isTokenExpiredError(err)) {
+          setError('Сессия истекла. Пожалуйста, авторизуйтесь заново.');
+        } else {
+          setError(err.message || 'Ошибка доступа к потоку видео');
+        }
       })
       .finally(() => setLoading(false));
   }, [id]);
@@ -245,23 +249,7 @@ export default function PlayerScreen() {
   };
 
   if (loading) {
-    return (
-      <View
-        style={[
-          styles.centerContainer,
-          {
-            paddingTop: Math.max(insets.top, 20),
-            paddingBottom: Math.max(insets.bottom, 20),
-            paddingLeft: Math.max(insets.left, 20),
-            paddingRight: Math.max(insets.right, 20),
-          },
-        ]}
-      >
-        <StatusBar hidden />
-        <ActivityIndicator size="large" color="#E50914" />
-        <Text style={styles.statusText}>Проверка прав доступа к фильму...</Text>
-      </View>
-    );
+    return <ScreenLoader label="Проверка прав доступа к фильму..." />;
   }
 
   if (error || !streamUrl) {

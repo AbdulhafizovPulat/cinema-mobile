@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, CreditCard, ShieldCheck, CheckCircle2, Lock, Sparkles } from 'lucide-react-native';
-import { api } from '../services/api';
+import { api, isTokenExpiredError } from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { Movie, SubscriptionType } from '../types/cinema';
 
@@ -38,25 +38,50 @@ export default function CheckoutScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     setLoadingDetails(true);
-    if (movieId) {
-      api
-        .getMovieById(Number(movieId))
-        .then(setMovie)
-        .catch(console.warn)
-        .finally(() => setLoadingDetails(false));
-    } else if (subscriptionTypeId) {
-      api
-        .getSubscriptionTypes()
-        .then((res) => {
-          const found = res.items?.find((s) => s.id === Number(subscriptionTypeId));
-          if (found) setSubType(found);
-        })
-        .catch(console.warn)
-        .finally(() => setLoadingDetails(false));
-    } else {
-      setLoadingDetails(false);
-    }
+
+    const loadData = async () => {
+      try {
+        // 1. Always load official subscription plans from the server
+        const subTypesRes = await api.getSubscriptionTypes().catch(() => ({ items: [] }));
+        const plans = subTypesRes.items || [];
+
+        let targetSub: SubscriptionType | null = null;
+        if (subscriptionTypeId) {
+          targetSub = plans.find((s) => Number(s.id) === Number(subscriptionTypeId)) || null;
+        }
+
+        // If specific plan not found or not passed, default to first server plan (e.g. Standard $10)
+        if (!targetSub && plans.length > 0) {
+          targetSub = plans[0];
+        }
+
+        if (isMounted && targetSub) {
+          setSubType(targetSub);
+        }
+
+        // 2. If movieId is provided, load movie info for context and post-checkout redirect
+        if (movieId) {
+          const movieData = await api.getMovieById(Number(movieId)).catch(() => null);
+          if (isMounted && movieData) {
+            setMovie(movieData);
+          }
+        }
+      } catch (e) {
+        console.warn('Error loading checkout details:', e);
+      } finally {
+        if (isMounted) {
+          setLoadingDetails(false);
+        }
+      }
+    };
+
+    loadData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [movieId, subscriptionTypeId]);
 
   const handlePay = async () => {
@@ -65,15 +90,19 @@ export default function CheckoutScreen() {
 
     try {
       const cleanCard = cardNumber.replace(/\s+/g, '');
-      if (subscriptionTypeId) {
-        const res = await api.subscribe(Number(subscriptionTypeId), cleanCard);
+      const planToSubscribeId = subType?.id || (subscriptionTypeId ? Number(subscriptionTypeId) : null);
+
+      if (planToSubscribeId) {
+        const res = await api.subscribe(planToSubscribeId, cleanCard);
         setSuccessMsg(res.message || 'Подписка успешно оформлена!');
         await refreshSubscriptions();
-      } else if (movieId) {
-        setError('Покупка отдельных фильмов больше не поддерживается.');
+      } else {
+        setError('Не удалось определить тариф подписки. Пожалуйста, выберите тариф заново.');
       }
     } catch (err: any) {
-      setError(err.message || 'Ошибка обработки платежа');
+      if (!isTokenExpiredError(err)) {
+        setError(err.message || 'Ошибка обработки платежа');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -87,13 +116,8 @@ export default function CheckoutScreen() {
     }
   };
 
-  const itemTitle = subType
-    ? `Тариф: ${subType.name}`
-    : movie
-    ? `Фильм: "${movie.title}"`
-    : 'Оплата платформы';
-
-  const amount = subType ? `$${subType.price}` : (movie ? movie.price || 199 : '$10');
+  const itemTitle = subType ? `Тариф: «${subType.name}»` : 'Оформление подписки';
+  const amount = subType ? `$${subType.price}` : '';
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -132,6 +156,9 @@ export default function CheckoutScreen() {
               ) : (
                 <View style={styles.summaryDetails}>
                   <Text style={styles.itemTitle}>{itemTitle}</Text>
+                  {movie && (
+                    <Text style={styles.movieSubTitle}>Для доступа к фильму: «{movie.title}»</Text>
+                  )}
                   <View style={styles.summaryRow}>
                     <Text style={styles.summaryLabel}>К оплате:</Text>
                     <Text style={styles.summaryAmount}>{amount}</Text>
@@ -198,15 +225,20 @@ export default function CheckoutScreen() {
               </View>
 
               <TouchableOpacity
-                style={styles.payBtn}
+                style={[
+                  styles.payBtn,
+                  (submitting || loadingDetails || !subType) && styles.payBtnDisabled,
+                ]}
                 onPress={handlePay}
-                disabled={submitting}
+                disabled={submitting || loadingDetails || !subType}
                 activeOpacity={0.85}
               >
                 {submitting ? (
                   <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.payBtnText}>Оплатить {amount}</Text>
+                  <Text style={styles.payBtnText}>
+                    {loadingDetails ? 'Загрузка тарифа...' : `Оплатить ${amount}`}
+                  </Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -261,8 +293,13 @@ const styles = StyleSheet.create({
   },
   itemTitle: {
     color: '#D0D0E0',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  movieSubTitle: {
+    color: '#8A8A9E',
+    fontSize: 13,
+    fontWeight: '500',
   },
   summaryRow: {
     flexDirection: 'row',
@@ -358,6 +395,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 8,
     elevation: 6,
+  },
+  payBtnDisabled: {
+    opacity: 0.5,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   payBtnText: {
     color: '#FFFFFF',

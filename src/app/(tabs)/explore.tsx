@@ -10,9 +10,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Search, X, Filter, Heart } from 'lucide-react-native';
+import { Search, X } from 'lucide-react-native';
 import { Header } from '../../components/Header';
 import { MovieCard } from '../../components/MovieCard';
+import { ScreenLoader } from '../../components/ScreenLoader';
 import { useMovieStore } from '../../store/useMovieStore';
 import { useFavoriteStore } from '../../store/useFavoriteStore';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -23,7 +24,7 @@ const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
 
 export default function ExploreScreen() {
   const router = useRouter();
-  const { movies } = useMovieStore();
+  const { movies, isLoading } = useMovieStore();
   const { isAuthenticated, isGuest } = useAuthStore();
   const favorites = useFavoriteStore((state) => state.favorites);
   const [search, setSearch] = useState('');
@@ -47,6 +48,16 @@ export default function ExploreScreen() {
   const handleSelectMovie = (movie: Movie) => {
     router.push(`/movie/${movie.id}`);
   };
+
+  // ─── Лоадер при первой загрузке ────────────────────────────────────────────
+  if (isLoading && movies.length === 0) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <Header />
+        <ScreenLoader label="Загружаем каталог..." />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>

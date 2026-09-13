@@ -5,12 +5,12 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Sparkles, CheckCircle2, ShieldCheck, Zap } from 'lucide-react-native';
 import { Header } from '../../components/Header';
+import { ScreenLoader } from '../../components/ScreenLoader';
 import { api } from '../../services/api';
 import { useAuthStore } from '../../store/useAuthStore';
 import { SubscriptionType } from '../../types/cinema';
@@ -45,6 +45,15 @@ export default function SubscribeScreen() {
     (s) => new Date(s.expiresAt).getTime() > new Date().getTime()
   );
 
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
+        <Header />
+        <ScreenLoader label="Загружаем тарифные планы..." />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <Header />
@@ -74,10 +83,7 @@ export default function SubscribeScreen() {
         )}
 
         {/* Subscription Plans */}
-        {loading ? (
-          <ActivityIndicator size="large" color="#E50914" style={{ marginVertical: 30 }} />
-        ) : (
-          <View style={styles.plansContainer}>
+        <View style={styles.plansContainer}>
             {plans.map((plan, index) => {
               const isBestValue = plan.durationDays >= 90;
               return (
@@ -131,7 +137,6 @@ export default function SubscribeScreen() {
               );
             })}
           </View>
-        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
